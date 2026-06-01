@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Homelab Tunnel Buddy</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/css/app.css" />
+</head>
+<body>
+  <div id="auth-overlay" class="overlay hidden">
+    <div class="card auth-card">
+      <h2>API key required</h2>
+      <p>Enter <code>HTB_API_KEY</code> from this server's <code>.env</code> (no quotes).</p>
+      <input type="password" id="api-key-input" placeholder="API key" autocomplete="off" />
+      <button type="button" id="api-key-save" class="btn primary">Continue</button>
+    </div>
+  </div>
+
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Main navigation">
+      <div class="sidebar-brand">
+        <span class="logo" aria-hidden="true"></span>
+        <span class="sidebar-title">Homelab Tunnel Buddy</span>
+      </div>
+      <nav class="sidebar-nav">
+        <button type="button" class="nav-item active" data-view="ingress" id="nav-ingress">
+          Ingress routes
+        </button>
+        <button type="button" class="nav-item" data-view="tunnel" id="nav-tunnel">
+          Tunnel
+        </button>
+        <button type="button" class="nav-item" data-view="cloudflared" id="nav-cloudflared">
+          Cloudflared
+        </button>
+        <button type="button" class="nav-item" data-view="logs" id="nav-logs">
+          Tunnel logs
+        </button>
+
+        <div class="nav-group" id="nav-group-settings">
+          <button
+            type="button"
+            class="nav-item nav-group-toggle"
+            id="nav-settings-toggle"
+            aria-expanded="false"
+            aria-controls="nav-settings-submenu"
+          >
+            Settings
+          </button>
+          <div id="nav-settings-submenu" class="nav-submenu hidden">
+            <button type="button" class="nav-item nav-sub" data-view="settings-tunnel">
+              Tunnel config
+            </button>
+            <button type="button" class="nav-item nav-sub" data-view="settings-app">
+              App &amp; paths
+            </button>
+          </div>
+        </div>
+      </nav>
+    </aside>
+
+    <div class="main-area">
+      <header class="header">
+        <h1 id="page-title">Ingress routes</h1>
+        <button type="button" id="btn-refresh" class="btn ghost">Refresh</button>
+      </header>
+
+      <main class="container">
+        <div id="view-ingress" class="view-panel">
+          <section class="card" id="ingress-card">
+            <div class="card-header">
+              <h2>Ingress routes</h2>
+              <button type="button" id="btn-add-route" class="btn primary small">Add route</button>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Hostname</th>
+                    <th>Service URL</th>
+                    <th>Public URL</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="ingress-tbody">
+                  <tr><td colspan="4" class="empty">Loading…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <div id="view-tunnel" class="view-panel hidden">
+          <section class="card" id="tunnel-panel">
+            <div class="card-header">
+              <h2>Tunnel</h2>
+              <span id="tunnel-running-badge" class="badge">—</span>
+            </div>
+            <dl class="meta-grid">
+              <dt>Tunnel name</dt>
+              <dd id="tunnel-name">—</dd>
+              <dt>Credentials file</dt>
+              <dd id="credentials-path" class="mono">—</dd>
+              <dt>Cloudflare</dt>
+              <dd id="cf-connection">—</dd>
+            </dl>
+            <div class="actions">
+              <button type="button" id="btn-start" class="btn primary">Start tunnel</button>
+              <button type="button" id="btn-restart" class="btn">Restart tunnel</button>
+              <button type="button" id="btn-stop" class="btn danger" disabled>Stop tunnel</button>
+            </div>
+            <p id="tunnel-message" class="message hidden"></p>
+          </section>
+        </div>
+
+        <div id="view-cloudflared" class="view-panel hidden">
+          <section class="card" id="cloudflared-panel">
+            <div class="card-header">
+              <h2>Cloudflared</h2>
+              <button type="button" id="btn-update-cloudflared" class="btn small">Update cloudflared</button>
+            </div>
+            <dl class="meta-grid" id="cloudflared-status">
+              <dt>Installed</dt><dd id="cf-installed">—</dd>
+              <dt>Authenticated</dt><dd id="cf-auth">—</dd>
+              <dt>Version</dt><dd id="cf-version">—</dd>
+              <dt>Latest (GitHub)</dt><dd id="cf-latest-github">—</dd>
+              <dt>Apt candidate</dt><dd id="cf-latest-apt">—</dd>
+              <dt>Account ID</dt><dd id="cf-account" class="mono small">—</dd>
+            </dl>
+            <p id="login-hint" class="message hidden"></p>
+          </section>
+        </div>
+
+        <div id="view-settings-tunnel" class="view-panel hidden">
+          <section class="card">
+            <div class="card-header">
+              <h2>Tunnel config</h2>
+            </div>
+            <p class="message">
+              Edits <code id="settings-config-path" class="mono">—</code>. A backup is saved as
+              <code>config.yml.bak</code> on each save.
+            </p>
+            <form id="settings-form" class="settings-form">
+              <label>
+                Tunnel name
+                <input type="text" id="settings-tunnel-name" required placeholder="my-tunnel" autocomplete="off" />
+              </label>
+              <label>
+                Credentials file
+                <input type="text" id="settings-credentials" class="mono" required placeholder="/root/.cloudflared/uuid.json" />
+              </label>
+              <label>
+                Choose from discovered files
+                <select id="settings-credentials-select">
+                  <option value="">— pick a credentials file —</option>
+                </select>
+              </label>
+              <label class="checkbox">
+                <input type="checkbox" id="settings-restart-after-save" checked />
+                Restart tunnel after save (if running)
+              </label>
+              <div class="actions">
+                <button type="submit" class="btn primary" id="settings-save">Save config</button>
+              </div>
+            </form>
+            <p id="settings-tunnel-status" class="message hidden"></p>
+          </section>
+        </div>
+
+        <div id="view-settings-app" class="view-panel hidden">
+          <section class="card">
+            <div class="card-header">
+              <h2>App &amp; paths</h2>
+            </div>
+            <p class="message">
+              These values come from this app's <code>.env</code> on the server. Edit that file and restart the UI service to change them.
+            </p>
+            <dl class="meta-grid settings-meta">
+              <dt>Config file</dt><dd id="settings-meta-config" class="mono">—</dd>
+              <dt>cloudflared dir</dt><dd id="settings-meta-dir" class="mono">—</dd>
+              <dt>Log file</dt><dd id="settings-meta-log" class="mono">—</dd>
+              <dt>Control mode</dt><dd id="settings-meta-control">—</dd>
+              <dt>systemd unit</dt><dd id="settings-meta-unit" class="mono">—</dd>
+              <dt>Hostname suffix</dt><dd id="settings-meta-suffix">—</dd>
+              <dt>DNS default on add</dt><dd id="settings-meta-dns-default">—</dd>
+              <dt>API key</dt><dd id="settings-meta-auth">—</dd>
+            </dl>
+          </section>
+        </div>
+
+        <div id="view-logs" class="view-panel hidden">
+          <section class="card logs-card">
+            <div class="card-header">
+              <h2>cloudflared log</h2>
+              <div class="card-header-actions logs-toolbar">
+                <label class="logs-filter-label">
+                  Filter
+                  <input type="search" id="log-filter" placeholder="hostname, error, http…" autocomplete="off" />
+                </label>
+                <label class="checkbox logs-follow-label">
+                  <input type="checkbox" id="log-follow" checked />
+                  Live tail
+                </label>
+                <button type="button" id="btn-log-refresh" class="btn small">Reload</button>
+                <button type="button" id="btn-log-clear" class="btn ghost small">Clear view</button>
+              </div>
+            </div>
+            <p id="log-meta" class="log-meta mono">—</p>
+            <p id="log-hint" class="message hidden"></p>
+            <pre id="log-output" class="log-output" aria-live="polite">Loading…</pre>
+          </section>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <dialog id="route-dialog">
+    <form method="dialog" id="route-form">
+      <h3 id="route-dialog-title">Add route</h3>
+      <input type="hidden" id="route-index" value="" />
+      <label id="route-hostname-label">
+        Hostname
+        <span class="hostname-input-wrap">
+          <input type="text" id="route-hostname" required placeholder="app.example.com" />
+          <span id="route-hostname-suffix" class="hostname-suffix hidden" aria-hidden="true"></span>
+        </span>
+      </label>
+      <label>
+        Service URL
+        <input type="url" id="route-service" required placeholder="http://192.168.1.10:80" />
+      </label>
+      <label class="checkbox" id="route-dns-label">
+        <input type="checkbox" id="route-dns" />
+        Create DNS CNAME via cloudflared
+      </label>
+      <div class="dialog-actions">
+        <button type="button" class="btn ghost" id="route-cancel">Cancel</button>
+        <button type="submit" class="btn primary">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast hidden" role="status"></div>
+
+  <script type="module" src="/js/api.js"></script>
+  <script type="module" src="/js/logs.js"></script>
+  <script type="module" src="/js/settings.js"></script>
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>

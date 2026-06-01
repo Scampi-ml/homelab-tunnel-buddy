@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+
+# Secrets & local config (live copies belong on the server)
+.env
+.env.*
+!.env.example
+config.yml
+config.yml.bak
+
+# Tunnel credentials & runtime state
+.cloudflared/
+*.json
+!package.json
+!package-lock.json
+.homelab-tunnel-buddy-running.json
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS & editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~
+
+# Upload artifacts
+homelab-tunnel-buddy-upload.tar.gz
+*.tar.gz
