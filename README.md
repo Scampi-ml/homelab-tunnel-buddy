@@ -253,7 +253,7 @@ Sidebar: **Ingress routes**, **Tunnel**, **Cloudflared**, **Tunnel logs**, **Set
 
 - **Ingress:** add/edit/delete `hostname` -> `service`; optional DNS via `cloudflared tunnel route dns`
 - **Tunnel:** status, start/stop/restart via systemd; auto-restart after ingress changes
-- **Cloudflared:** version, login hint, upgrade via `apt-get install --only-upgrade cloudflared`
+- **Cloudflared:** compares `cloudflared --version` (installed) to the latest GitHub release on each page visit; upgrade via apt (with `.deb` fallback if the repo lags)
 - **Tunnel logs:** tail `/var/log/cloudflared.log` (requires `--logfile` on `cloudflared`)
 - **Settings:** tunnel name, credentials path, read-only `.env` paths
 

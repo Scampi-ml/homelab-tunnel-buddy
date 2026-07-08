@@ -209,6 +209,7 @@ First line = app OK on LAN; second = tunnel + DNS OK.
 | **Ingress saved, site unchanged** | **Restart tunnel** in UI or `sudo systemctl restart cloudflared` |
 | **Two tunnels / flapping** | `HTB_CONTROL_MODE=systemd` only; one `cloudflared.service`; [cleanup](#cloudflared-tunnel-cleanup) stale connectors |
 | **Log view empty** | Add `--logfile /var/log/cloudflared.log` to `cloudflared` `ExecStart`; set `CLOUDFLARED_LOG_FILE` in `.env`; ensure the UI process can read the log file |
+| **Cloudflared shows "Up to date" but GitHub is newer** | Hard-refresh the Cloudflared page; confirm with `cloudflared --version` on the server. Upgrade via the UI button or `apt-get update && apt-get install -y --only-upgrade cloudflared` |
 
 ```bash
 sudo journalctl -u homelab-tunnel-buddy -n 40 --no-pager

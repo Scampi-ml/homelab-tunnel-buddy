@@ -191,21 +191,27 @@ function setUpdateButton(u) {
   if (!u || u.updateAvailable === null) {
     btn.textContent = 'Update cloudflared';
     btn.disabled = false;
-    btn.title = 'Check GitHub releases and apt, then upgrade if newer';
+    btn.title = 'Compare installed cloudflared to latest GitHub release';
     return;
   }
   if (u.updateAvailable) {
-    btn.textContent = `Update to ${u.latestForUpgrade || 'latest'}`;
+    const target = u.latestGitHub || u.latestForUpgrade || 'latest';
+    btn.textContent = `Update to ${target}`;
     btn.disabled = false;
-    btn.title = `Upgrade from ${u.currentParsed} (GitHub: ${u.latestGitHub || '?'})`;
+    btn.title = `Installed ${u.currentParsed}; latest GitHub release is ${u.latestGitHub || '?'}`;
   } else {
     btn.textContent = 'Up to date';
     btn.disabled = true;
-    btn.title = `Installed ${u.currentParsed} matches available release`;
+    btn.title = `Installed ${u.currentParsed} matches GitHub release ${u.latestGitHub || '?'}`;
   }
 }
 
 async function loadCloudflaredStatus() {
+  $('cf-latest-github').textContent = 'Checking GitHub…';
+  const btn = $('btn-update-cloudflared');
+  btn.disabled = true;
+  btn.textContent = 'Checking versions…';
+
   const s = await api('/cloudflared/status');
   $('cf-installed').textContent = s.installed ? 'Yes' : 'No';
   $('cf-auth').textContent = s.authenticated ? 'Yes' : 'No';
@@ -217,7 +223,6 @@ async function loadCloudflaredStatus() {
     $('cf-latest-github').innerHTML = u.latestGitHub
       ? `${u.latestGitHub} <a href="${u.githubUrl}" class="copy-link" target="_blank" rel="noopener">releases</a>`
       : u.githubError || '—';
-    $('cf-latest-apt').textContent = u.latestApt || '—';
     setUpdateButton(u);
   }
 

@@ -184,20 +184,9 @@ async function fetchGitHubLatestVersion() {
   return tag.replace(/^v/i, '') || null;
 }
 
-async function getAptCandidateVersion() {
-  try {
-    const { stdout } = await execa('apt-cache', ['policy', 'cloudflared'], {
-      reject: false
-    });
-    const match = stdout.match(/Candidate:\s*(\S+)/);
-    if (!match || match[1] === '(none)') return null;
-    return parseCloudflaredVersion(match[1]) || match[1];
-  } catch {
-    return null;
-  }
-}
-
-/** Compare installed version to GitHub + apt candidate before upgrading. */
+/**
+ * Compare installed version (`cloudflared --version`) to latest GitHub release.
+ */
 export async function checkCloudflaredUpdate() {
   const versionRaw = await getCloudflaredVersion();
   const currentParsed = parseCloudflaredVersion(versionRaw);
@@ -211,39 +200,17 @@ export async function checkCloudflaredUpdate() {
     githubError = err.message;
   }
 
-  const aptCandidate = await getAptCandidateVersion();
-
-  const latestForUpgrade =
-    updateMethod === 'apt' && aptCandidate ? aptCandidate : latestGitHub;
-
-  const updateAvailableGitHub =
+  const updateAvailable =
     currentParsed && latestGitHub
       ? compareVersions(currentParsed, latestGitHub) < 0
       : null;
-
-  const updateAvailableApt =
-    currentParsed && aptCandidate
-      ? compareVersions(currentParsed, aptCandidate) < 0
-      : null;
-
-  let updateAvailable = null;
-  if (updateMethod === 'apt') {
-    updateAvailable = updateAvailableApt ?? updateAvailableGitHub;
-  } else if (currentParsed && latestForUpgrade) {
-    updateAvailable = compareVersions(currentParsed, latestForUpgrade) < 0;
-  } else {
-    updateAvailable = updateAvailableGitHub;
-  }
 
   return {
     current: versionRaw,
     currentParsed,
     latestGitHub,
-    latestApt: aptCandidate,
-    latestForUpgrade,
+    latestForUpgrade: latestGitHub,
     updateAvailable,
-    updateAvailableGitHub,
-    updateAvailableApt,
     updateMethod,
     githubUrl: GITHUB_RELEASES_PAGE,
     githubError
@@ -376,6 +343,16 @@ export async function updateCloudflared(options = {}) {
       break;
     case 'apt':
       output = await updateViaApt();
+      {
+        const afterApt = parseCloudflaredVersion(await getCloudflaredVersion());
+        if (
+          check.latestGitHub &&
+          afterApt &&
+          compareVersions(afterApt, check.latestGitHub) < 0
+        ) {
+          output = [output, await updateViaDpkg()].filter(Boolean).join('\n');
+        }
+      }
       break;
     case 'builtin':
       output = await updateViaBuiltin();
