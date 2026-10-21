@@ -11,15 +11,27 @@ export function validateTunnelName(name) {
   return true;
 }
 
+/** Cloudflare published-application origins. See https://developers.cloudflare.com/tunnel/routing/#supported-protocols */
+const SERVICE_URL_PROTOCOLS = new Set(['http:', 'https:', 'ssh:', 'tcp:', 'rdp:', 'smb:']);
+const SERVICE_BUILTIN = /^(hello_world|bastion|http_status:\d{3})$/;
+const SERVICE_UNIX = /^(unix\+tls|unix):.+/;
+
 export function validateServiceUrl(url) {
+  if (!url || typeof url !== 'string') {
+    return 'Service URL is required';
+  }
+  const trimmed = url.trim();
+  if (SERVICE_BUILTIN.test(trimmed) || SERVICE_UNIX.test(trimmed)) {
+    return true;
+  }
   try {
-    const parsed = new URL(url);
-    if (!['http:', 'https:'].includes(parsed.protocol)) {
-      return 'Service URL must use http or https';
+    const parsed = new URL(trimmed);
+    if (!SERVICE_URL_PROTOCOLS.has(parsed.protocol)) {
+      return 'Service must use http, https, ssh, tcp, rdp, smb, unix, hello_world, or http_status';
     }
     return true;
   } catch {
-    return 'Invalid URL format';
+    return 'Invalid service URL format';
   }
 }
 
